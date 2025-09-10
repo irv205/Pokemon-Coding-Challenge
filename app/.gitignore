@@ -1,0 +1,62 @@
+/build
+# Gradle
+.gradle/
+build/
+**/build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Android Studio
+.idea/
+*.iml
+*.ipr
+*.iws
+.idea/caches
+.idea/libraries
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+
+# Local properties (keystore, sdk, etc.)
+local.properties
+*.keystore
+*.jks
+
+# Generated
+captures/
+outputs/
+generated/
+*.apk
+*.ap_
+
+# IntelliJ
+out/
+
+# Kotlin
+*.kotlin_metadata
+*.kotlin_module
+*.kotlin_builtins
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+
+# Gradle wrapper cache
+gradle-app.setting
+
+# Android crashlytics / Firebase
+crashlytics-build.properties
+fabric.properties
+app/google-services.json
+app/google-services.plist
+
+# JetBrains
+.idea/sonarlint/
+.idea/deploymentTargetDropDown.xml
+.idea/misc.xml
+
+# Misc
+*.hprof
