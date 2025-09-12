@@ -5,4 +5,6 @@ import com.irv205.mytestproject.domain.model.PokemonList
 
 interface PokeRepository {
     suspend fun getPokemonList(): ResponseHandler<PokemonList>
+
+    suspend fun loadNextPokemonPage(): ResponseHandler<PokemonList>
 }

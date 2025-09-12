@@ -5,6 +5,7 @@ data class PokemonList(
 )
 
 data class Pokemon(
+    val id: String,
     val name: String,
-    val url: String
+    val img: String
 )
