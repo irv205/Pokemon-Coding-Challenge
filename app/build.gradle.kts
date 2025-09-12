@@ -70,6 +70,7 @@ dependencies {
     implementation(libs.gson)
     implementation(libs.coil)
     implementation(libs.coil.compose)
+    implementation(libs.lottie.compose)
 }
 
 kapt {

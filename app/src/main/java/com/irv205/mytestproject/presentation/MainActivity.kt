@@ -16,7 +16,6 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             MyTestProjectTheme {
-                val viewModel: MainViewModel = hiltViewModel()
                 PokemonScreen(
                     columns = 3
                 )

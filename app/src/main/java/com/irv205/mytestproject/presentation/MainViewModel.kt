@@ -11,7 +11,13 @@ import com.irv205.mytestproject.domain.model.Pokemon
 import com.irv205.mytestproject.domain.repository.PokeRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 
 @HiltViewModel
@@ -19,52 +25,67 @@ class MainViewModel @Inject constructor(
     private val repository: PokeRepository
 ) : ViewModel() {
 
-    var uiState by mutableStateOf(UiState())
-        private set
+    private val _uiState = MutableStateFlow<UiState>(UiState.Empty)
+    val uiState: StateFlow<UiState> = _uiState.asStateFlow()
+
+    private val loadMutex = Mutex()
 
     init {
         refresh()
     }
 
-    private fun refresh() {
-        uiState = uiState.copy(loading = true, error = null)
+
+    fun refresh() {
+        _uiState.value = UiState.Loading
         viewModelScope.launch(Dispatchers.IO) {
-            when(val result = repository.getPokemonList()) {
-                is ResponseHandler.Error -> {
-                    uiState = uiState.copy(loading = false, error = result.message)
-                    Log.e("ERROR====", result.message)
-                }
+            when (val res = repository.getPokemonList()) {
                 is ResponseHandler.Success -> {
-                    uiState =
-                        uiState.copy(loading = false,
-                            items = result.data.list,
-                            endReached = result.data.list.isEmpty(),
-                            error = null
-                        )
-                    Log.e("Success=====", result.data.list.toString())
+                    val list = res.data.list.orEmpty() // nunca nulo
+                    _uiState.update {
+                        if (list.isEmpty()) UiState.Empty
+                        else UiState.Success(items = list, endReached = false)
+                    }
+                }
+                is ResponseHandler.Error -> {
+                    _uiState.value = UiState.Error(res.message)
                 }
             }
         }
     }
 
+
     fun loadMore() {
-        if (uiState.loading || uiState.endReached) return
-        uiState = uiState.copy(loading = true)
         viewModelScope.launch(Dispatchers.IO) {
-            when(val result = repository.loadNextPokemonPage()) {
-                is ResponseHandler.Error -> {
-                    uiState = uiState.copy(loading = false, error = result.message)
-                    Log.e("ERROR====", result.message)
-                }
-                is ResponseHandler.Success -> {
-                    val mergeList = (uiState.items + result.data.list).distinctBy { it.name }
-                    uiState =
-                        uiState.copy(loading = false,
-                            items = mergeList,
-                            endReached = result.data.list.isEmpty(),
-                            error = null
-                        )
-                    Log.e("Success=====", result.data.list.toString())
+            loadMutex.withLock {
+                val current = _uiState.value
+                if (current !is UiState.Success || current.endReached || current.appending) return@withLock
+
+                _uiState.update { (it as UiState.Success).copy(appending = true, appendError = null) }
+
+                try {
+                    when (val res = repository.loadNextPokemonPage()) {
+                        is ResponseHandler.Success -> {
+                            val next = res.data.list.orEmpty()
+                            val merged = (current.items + next).distinctBy { it.name }
+                            _uiState.update {
+                                UiState.Success(
+                                    items = merged,
+                                    endReached = next.isEmpty(),
+                                    appending = false,
+                                    appendError = null
+                                )
+                            }
+                        }
+                        is ResponseHandler.Error -> {
+                            _uiState.update {
+                                (it as UiState.Success).copy(appending = false, appendError = res.message)
+                            }
+                        }
+                    }
+                } catch (t: Throwable) {
+                    _uiState.update {
+                        (it as UiState.Success).copy(appending = false, appendError = t.message ?: "Unknown error")
+                    }
                 }
             }
         }
